@@ -30,8 +30,9 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
 def forward(self, x):
-    x = F.upsample(x, size=(299, 299), mode='bilinear', align_corners=True)
-
+    x = F.interpolate(x, size=(299, 299), mode='bilinear', align_corners=True)
+    F.interpolate()
+    
     x = self.Conv2d_1a_3x3(x)  # 299 x 299 x 3
     x = self.Conv2d_2a_3x3(x)  # 149 x 149 x 32
     x = self.Conv2d_2b_3x3(x)  # 147 x 147 x 32

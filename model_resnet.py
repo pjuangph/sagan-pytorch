@@ -178,7 +178,7 @@ class ConvBlock(nn.Module):
         if self.skip_proj:
             skip = input
             if self.upsample:
-                skip = F.upsample(skip, scale_factor=2)
+                skip = F.interpolate(skip, scale_factor=2) # upsample
             skip = self.conv_skip(skip)
             if self.downsample:
                 skip = F.avg_pool2d(skip, 2)
@@ -219,7 +219,7 @@ class Generator(nn.Module):
         out = F.relu(out)
         out = self.colorize(out)
 
-        return F.tanh(out)
+        return torch.tanh(out)
 
 
 class Discriminator(nn.Module):

@@ -150,7 +150,7 @@ class ConvBlock(nn.Module):
     def forward(self, input, class_id=None):
         out = input
         if self.upsample:
-            out = F.upsample(out, scale_factor=2)
+            out = F.interpolate(out, scale_factor=2) # upsample
 
         out = self.conv(out)
 
@@ -167,30 +167,47 @@ class ConvBlock(nn.Module):
 
 
 class Generator(nn.Module):
-    def __init__(self, code_dim=100, n_class=10):
+    def __init__(self, att=True, image_size=28, n_class=10, image_channels=3):
+        """Generates an image
+
+        Args:
+            att (bool, optional): Include attention. Defaults to True.
+            image_size (int, optional): Pixels (HxW) of the square image. Defaults to 28.
+            n_class (int, optional): Number of classes (dog, cat, bird). Defaults to 10.
+            image_channels (int, optional): 1 for Grayscale, 3 for RGB. Defaults to 3.
+        """
         super().__init__()
 
-        self.lin_code = spectral_init(nn.Linear(code_dim, 4 * 4 * 512))
+        self.lin_code = spectral_init(nn.Linear(image_size, 4 * 4 * 512))
         self.conv = nn.ModuleList([ConvBlock(512, 512, n_class=n_class),
                                    ConvBlock(512, 512, n_class=n_class),
                                    ConvBlock(512, 512, n_class=n_class,
-                                             self_attention=True),
+                                             self_attention=att),
                                    ConvBlock(512, 256, n_class=n_class),
                                    ConvBlock(256, 128, n_class=n_class)])
 
-        self.colorize = spectral_init(nn.Conv2d(128, 3, [3, 3], padding=1))
+        self.colorize = spectral_init(nn.Conv2d(128, image_channels, [3, 3], padding=1))
 
-    def forward(self, input, class_id):
+    def forward(self, input:torch.Tensor, class_id):
+        """Generates an image from a random input and class_id
+
+        Args:
+            input (torch.Tensor): random image as input
+            class_id (torch.Tensor): tensor of integers representing a class 
+
+        Returns:
+            [type]: [description]
+        """
         out = self.lin_code(input)
         out = F.relu(out)
         out = out.view(-1, 512, 4, 4)
 
-        for conv in self.conv:
+        for conv in self.conv:              # Use module list because we need to pass a class_id into each one of them
             out = conv(out, class_id)
 
         out = self.colorize(out)
 
-        return F.tanh(out)
+        return torch.tanh(out)
 
 
 class Discriminator(nn.Module):
